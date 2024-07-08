@@ -3,9 +3,7 @@ from datetime import datetime, timedelta
 
 TOKEN = '7465745734:AAHnr3_5gYZsC7m2L_92BZW72rA9jHBHago'
 GROUP_ID = -1001855011523
-OWNER = '@Владелец'  # Укажите владельца группы
-ADMIN_USERNAMES = ['@TheFoZzYq', '@ver1ade']
-ADMIN_IDS = [1653222949, 5311731876]
+OWNER = '@TheFoZzYq'  # Изменено на @TheFoZzYq
 
 bot = telebot.TeleBot(TOKEN)
 ban_list = []
@@ -62,9 +60,14 @@ def show_help(message):
 # Команда "админы"
 @bot.message_handler(func=lambda message: message.text.lower() == 'админы')
 def show_admins(message):
-    admin_list = '\n'.join(ADMIN_USERNAMES)
-    response = f"Владелец:\n{OWNER}\n\nПупсики на админке:\n{admin_list}"
-    bot.reply_to(message, response)
+    try:
+        chat_admins = bot.get_chat_administrators(GROUP_ID)
+        admin_list = [f"@{admin.user.username}" for admin in chat_admins if admin.user.username]
+        admin_list_str = '\n'.join(admin_list)
+        response = f"Владелец:\n{OWNER}\n\nПупсики на админке:\n{admin_list_str}"
+        bot.reply_to(message, response)
+    except Exception as e:
+        bot.reply_to(message, f"Ошибка: {str(e)}")
 
 # Команда бана
 @bot.message_handler(commands=['ban'])
@@ -86,6 +89,8 @@ def ban_user(message):
             bot.reply_to(message, "Некорректное время бана.")
     except Exception as e:
         bot.reply_to(message, f"Ошибка: {str(e)}")
+
+# Остальной код остается без изменений
 
 # Команда мута
 @bot.message_handler(commands=['mute'])
