@@ -4,8 +4,8 @@ from datetime import datetime, timedelta
 TOKEN = '7465745734:AAHnr3_5gYZsC7m2L_92BZW72rA9jHBHago'
 GROUP_ID = -1001855011523
 OWNER = '@Владелец'  # Укажите владельца группы
-ADMIN_USERNAMES = ['@TheFoZzYq']
-ADMIN_IDS = [1653222949]
+ADMIN_USERNAMES = ['@TheFoZzYq, @ver1ade']
+ADMIN_IDS = [1653222949,5311731876]
 
 bot = telebot.TeleBot(TOKEN)
 ban_list = []
