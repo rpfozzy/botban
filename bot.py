@@ -212,19 +212,25 @@ def add_report(message):
     except Exception as e:
         bot.reply_to(message, f"Ошибка: {str(e)}")
 
-# Русская команда бан
-@bot.message_handler(func=lambda message: message.text.lower().startswith('бан') and message.reply_to_message is not None)
-def ban_forever_ru(message):
+# Команда "т- {номер отчета}"
+@bot.message_handler(func=lambda message: message.text.lower().startswith('т-'))
+def delete_report(message):
     if not is_admin(message.from_user.id):
         bot.reply_to(message, "Вы не администратор.")
         return
 
     try:
-        parts = message.text.split('\n', 1)
-        reason = parts[1] if len(parts) > 1 else 'Без указания причины'
-        bot.ban_chat_member(GROUP_ID, message.reply_to_message.from_user.id)
-        ban_list.append((message.reply_to_message.from_user.username, 'Навсегда', reason))
-        bot.reply_to(message, f"Пользователь {message.reply_to_message.from_user.username} забанен навсегда.\nПричина: {reason}")
+        parts = message.text.split()
+        if len(parts) < 2 or not parts[1].isdigit():
+            bot.reply_to(message, "Некорректный формат команды. Используйте: т- {номер отчета}")
+            return
+
+        report_index = int(parts[1]) - 1
+        if 0 <= report_index < len(report_list):
+            removed_report = report_list.pop(report_index)
+            bot.reply_to(message, f"Отчёт {report_index + 1} на пользователя {removed_report[1]} удалён.")
+        else:
+            bot.reply_to(message, "Отчёт с таким номером не найден.")
     except Exception as e:
         bot.reply_to(message, f"Ошибка: {str(e)}")
 
