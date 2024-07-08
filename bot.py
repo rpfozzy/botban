@@ -195,23 +195,6 @@ def show_mutelist(message):
         bot.reply_to(message, response)
 
 # Команда "отчёты"
-@bot.message_handler(func=lambda message: message.text.lower() == 'отчёты')
-def show_reports(message):
-    if not is_admin(message.from_user.id):
-        bot.reply_to(message, "Вы не администратор.")
-        return
-
-    if not report_list:
-        bot.reply_to(message, "Отчётов пока нет.")
-    else:
-        response = "Отчёты за всё время:\n"
-        for i, (reporter, reported_user, description) in enumerate(report_list, 1):
-            response += f"{i}. Добавил(-а) отчёт — {reporter}\n"
-            response += f"   На кого был добавлен отчёт — {reported_user}\n"
-            response += f"   За что был добавлен отчёт — {description}\n\n"
-        bot.reply_to(message, response)
-
-# Команда "т+ @user описание"
 @bot.message_handler(func=lambda message: message.text.lower().startswith('т+'))
 def add_report(message):
     if not is_admin(message.from_user.id):
@@ -224,9 +207,13 @@ def add_report(message):
             bot.reply_to(message, "Некорректный формат команды. Используйте: т+ @user описание")
             return
 
-        reported_user = parts[1].lstrip('@')
+        reported_username = parts[1].lstrip('@')
         description = parts[2]
         reporter = f"@{message.from_user.username}"
+
+        # Получаем объект пользователя
+        reported_user_obj = bot.get_chat_member(GROUP_ID, reported_username)
+        reported_user = f"@{reported_user_obj.user.username}"
 
         report_list.append((reporter, reported_user, description))
         bot.reply_to(message, f"Отчёт на пользователя {reported_user} добавлен.\nОписание: {description}")
