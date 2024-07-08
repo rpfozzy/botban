@@ -202,7 +202,7 @@ def show_reports(message):
         return
 
     if not report_list:
-        bot.reply_to(message, "Отчётов пока нет.")
+        bot.reply_to(message, "Отчётов нет.")
     else:
         response = "Отчёты за всё время:\n"
         for i, (reporter, reported_user, description) in enumerate(report_list, 1):
@@ -224,28 +224,16 @@ def add_report(message):
             bot.reply_to(message, "Некорректный формат команды. Используйте: т+ @user описание")
             return
 
-        reported_user = parts[1].lstrip('@')
+        reported_username = parts[1].lstrip('@')
         description = parts[2]
         reporter = f"@{message.from_user.username}"
 
+        # Получаем объект пользователя
+        reported_user_obj = bot.get_chat_member(GROUP_ID, reported_username)
+        reported_user = f"@{reported_user_obj.user.username}"
+
         report_list.append((reporter, reported_user, description))
         bot.reply_to(message, f"Отчёт на пользователя {reported_user} добавлен.\nОписание: {description}")
-    except Exception as e:
-        bot.reply_to(message, f"Ошибка: {str(e)}")
-
-# Русская команда бан
-@bot.message_handler(func=lambda message: message.text.lower().startswith('бан') and message.reply_to_message is not None)
-def ban_forever_ru(message):
-    if not is_admin(message.from_user.id):
-        bot.reply_to(message, "Вы не администратор.")
-        return
-
-    try:
-        parts = message.text.split('\n', 1)
-        reason = parts[1] if len(parts) > 1 else 'Без указания причины'
-        bot.ban_chat_member(GROUP_ID, message.reply_to_message.from_user.id)
-        ban_list.append((message.reply_to_message.from_user.username, 'Навсегда', reason))
-        bot.reply_to(message, f"Пользователь {message.reply_to_message.from_user.username} забанен навсегда.\nПричина: {reason}")
     except Exception as e:
         bot.reply_to(message, f"Ошибка: {str(e)}")
 
