@@ -4,8 +4,8 @@ from datetime import datetime, timedelta
 TOKEN = '7465745734:AAHnr3_5gYZsC7m2L_92BZW72rA9jHBHago'
 GROUP_ID = -1001855011523
 OWNER = '@Владелец'  # Укажите владельца группы
-ADMIN_USERNAMES = ['@TheFoZzYq, @ver1ade']
-ADMIN_IDS = [1653222949,5311731876]
+ADMIN_USERNAMES = ['@TheFoZzYq', '@ver1ade']
+ADMIN_IDS = [1653222949, 5311731876]
 
 bot = telebot.TeleBot(TOKEN)
 ban_list = []
@@ -14,7 +14,11 @@ report_list = []
 
 # Проверка администратора
 def is_admin(user_id):
-    return user_id in ADMIN_IDS
+    chat_admins = bot.get_chat_administrators(GROUP_ID)
+    for admin in chat_admins:
+        if admin.user.id == user_id and admin.user.id != bot.user.id:
+            return True
+    return False
 
 # Преобразование времени бана
 def parse_ban_time(ban_time_str):
@@ -80,36 +84,6 @@ def ban_user(message):
             bot.reply_to(message, f"Пользователь {message.reply_to_message.from_user.username} забанен до {until_date}.\nПричина: {reason}")
         else:
             bot.reply_to(message, "Некорректное время бана.")
-    except Exception as e:
-        bot.reply_to(message, f"Ошибка: {str(e)}")
-
-# Команда бана навсегда
-@bot.message_handler(commands=['ban_forever'])
-def ban_forever(message):
-    if not is_admin(message.from_user.id):
-        bot.reply_to(message, "Вы не администратор.")
-        return
-
-    try:
-        reason = ' '.join(message.text.split()[1:])
-        bot.ban_chat_member(GROUP_ID, message.reply_to_message.from_user.id)
-        ban_list.append((message.reply_to_message.from_user.username, 'Навсегда', reason))
-        bot.reply_to(message, f"Пользователь {message.reply_to_message.from_user.username} забанен навсегда.\nПричина: {reason}")
-    except Exception as e:
-        bot.reply_to(message, f"Ошибка: {str(e)}")
-
-# Команда разбана
-@bot.message_handler(commands=['unban'])
-def unban_user(message):
-    if not is_admin(message.from_user.id):
-        bot.reply_to(message, "Вы не администратор.")
-        return
-
-    try:
-        bot.unban_chat_member(GROUP_ID, message.reply_to_message.from_user.id)
-        global ban_list
-        ban_list = [entry for entry in ban_list if entry[0] != message.reply_to_message.from_user.username]
-        bot.reply_to(message, f"Пользователь {message.reply_to_message.from_user.username} разбанен.")
     except Exception as e:
         bot.reply_to(message, f"Ошибка: {str(e)}")
 
