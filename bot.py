@@ -9,7 +9,6 @@ bot = telebot.TeleBot(TOKEN)
 ban_list = []
 mute_list = []
 report_list = []
-user_permissions = {}
 
 # Проверка администратора
 def is_admin(user_id):
@@ -33,20 +32,6 @@ def parse_ban_time(ban_time_str):
             amount = int(ban_time_str.replace(unit, '').strip())
             return timedelta(**{unit_en: amount})
     return None
-
-# Получение текущих разрешений пользователя
-def get_user_permissions(user_id):
-    member = bot.get_chat_member(GROUP_ID, user_id)
-    return {
-        'can_send_messages': member.can_send_messages,
-        'can_send_media_messages': member.can_send_media_messages,
-        'can_send_polls': member.can_send_polls,
-        'can_send_other_messages': member.can_send_other_messages,
-        'can_add_web_page_previews': member.can_add_web_page_previews,
-        'can_change_info': member.can_change_info,
-        'can_invite_users': member.can_invite_users,
-        'can_pin_messages': member.can_pin_messages
-    }
 
 # Команда /help
 @bot.message_handler(commands=['help'])
@@ -129,7 +114,6 @@ def mute_user(message):
 
         if mute_duration:
             until_date = datetime.now() + mute_duration
-            user_permissions[user_id] = get_user_permissions(user_id)
             bot.restrict_chat_member(GROUP_ID, user_id, can_send_messages=False, until_date=until_date.timestamp())
             mute_list.append((username, until_date, reason))
             bot.reply_to(message, f"Пользователь {username} замучен до {until_date}.\nПричина: {reason}")
@@ -138,37 +122,27 @@ def mute_user(message):
     except Exception as e:
         bot.reply_to(message, f"Ошибка: {str(e)}")
 
-# Русская команда размут
-@bot.message_handler(func=lambda message: message.text.lower() == 'размут' and message.reply_to_message is not None)
-def unmute_ru(message):
+# Команда размут
+@bot.message_handler(commands=['unmute'])
+def unmute_user(message):
     if not is_admin(message.from_user.id):
         bot.reply_to(message, "Вы не администратор.")
         return
 
     try:
-        user_id = message.reply_to_message.from_user.id
-        username = message.reply_to_message.from_user.username
+        if message.reply_to_message:
+            user_id = message.reply_to_message.from_user.id
+            username = message.reply_to_message.from_user.username
+        else:
+            username = message.text.split()[1]
+            user_id = bot.get_chat_member(GROUP_ID, username).user.id
 
-        permissions = {
-            'can_send_messages': True,
-            'can_send_media_messages': True,
-            'can_send_polls': True,
-            'can_send_other_messages': True,
-            'can_add_web_page_previews': True,
-            'can_change_info': False,
-            'can_invite_users': False,
-            'can_pin_messages': False
-        }
-
-        bot.restrict_chat_member(GROUP_ID, user_id, **permissions)
-
+        bot.restrict_chat_member(GROUP_ID, user_id, can_send_messages=True)
         global mute_list
         mute_list = [entry for entry in mute_list if entry[0] != username]
-        bot.reply_to(message, f"Пользователь {username} размучен с полными разрешениями.")
+        bot.reply_to(message, f"Пользователь {username} размучен.")
     except Exception as e:
         bot.reply_to(message, f"Ошибка: {str(e)}")
-
-
 
 # Команда /banlist
 @bot.message_handler(commands=['banlist'])
@@ -271,9 +245,7 @@ def mute_forever_ru(message):
     try:
         parts = message.text.split('\n', 1)
         reason = parts[1] if len(parts) > 1 else 'Без указания причины'
-        user_id = message.reply_to_message.from_user.id
-        user_permissions[user_id] = get_user_permissions(user_id)
-        bot.restrict_chat_member(GROUP_ID, user_id, can_send_messages=False)
+        bot.restrict_chat_member(GROUP_ID, message.reply_to_message.from_user.id, can_send_messages=False)
         mute_list.append((message.reply_to_message.from_user.username, 'Навсегда', reason))
         bot.reply_to(message, f"Пользователь {message.reply_to_message.from_user.username} замучен навсегда.\nПричина: {reason}")
     except Exception as e:
@@ -302,19 +274,10 @@ def unmute_ru(message):
         return
 
     try:
-        user_id = message.reply_to_message.from_user.id
-        username = message.reply_to_message.from_user.username
-
-        if user_id in user_permissions:
-            permissions = user_permissions[user_id]
-            bot.restrict_chat_member(GROUP_ID, user_id, **permissions)
-            del user_permissions[user_id]
-        else:
-            bot.restrict_chat_member(GROUP_ID, user_id, can_send_messages=True)
-
+        bot.restrict_chat_member(GROUP_ID, message.reply_to_message.from_user.id, can_send_messages=True)
         global mute_list
-        mute_list = [entry for entry in mute_list if entry[0] != username]
-        bot.reply_to(message, f"Пользователь {username} размучен.")
+        mute_list = [entry for entry in mute_list if entry[0] != message.reply_to_message.from_user.username]
+        bot.reply_to(message, f"Пользователь {message.reply_to_message.from_user.username} размучен.")
     except Exception as e:
         bot.reply_to(message, f"Ошибка: {str(e)}")
 
