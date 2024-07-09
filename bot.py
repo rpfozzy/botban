@@ -138,33 +138,37 @@ def mute_user(message):
     except Exception as e:
         bot.reply_to(message, f"Ошибка: {str(e)}")
 
-# Команда размут
-@bot.message_handler(commands=['unmute'])
-def unmute_user(message):
+# Русская команда размут
+@bot.message_handler(func=lambda message: message.text.lower() == 'размут' and message.reply_to_message is not None)
+def unmute_ru(message):
     if not is_admin(message.from_user.id):
         bot.reply_to(message, "Вы не администратор.")
         return
 
     try:
-        if message.reply_to_message:
-            user_id = message.reply_to_message.from_user.id
-            username = message.reply_to_message.from_user.username
-        else:
-            username = message.text.split()[1]
-            user_id = bot.get_chat_member(GROUP_ID, username).user.id
+        user_id = message.reply_to_message.from_user.id
+        username = message.reply_to_message.from_user.username
 
-        if user_id in user_permissions:
-            permissions = user_permissions[user_id]
-            bot.restrict_chat_member(GROUP_ID, user_id, **permissions)
-            del user_permissions[user_id]
-        else:
-            bot.restrict_chat_member(GROUP_ID, user_id, can_send_messages=True)
+        permissions = {
+            'can_send_messages': True,
+            'can_send_media_messages': True,
+            'can_send_polls': True,
+            'can_send_other_messages': True,
+            'can_add_web_page_previews': True,
+            'can_change_info': False,
+            'can_invite_users': False,
+            'can_pin_messages': False
+        }
+
+        bot.restrict_chat_member(GROUP_ID, user_id, **permissions)
 
         global mute_list
         mute_list = [entry for entry in mute_list if entry[0] != username]
-        bot.reply_to(message, f"Пользователь {username} размучен.")
+        bot.reply_to(message, f"Пользователь {username} размучен с полными разрешениями.")
     except Exception as e:
         bot.reply_to(message, f"Ошибка: {str(e)}")
+
+
 
 # Команда /banlist
 @bot.message_handler(commands=['banlist'])
