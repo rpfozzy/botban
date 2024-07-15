@@ -1,7 +1,7 @@
 import telebot
 from datetime import datetime, timedelta
 
-TOKEN = 'YOUR_BOT_TOKEN'
+TOKEN = '7465745734:AAHnr3_5gYZsC7m2L_92BZW72rA9jHBHago'
 GROUP_ID = -1001855011523
 OWNER = '@TheFoZzYq'  # Изменено на @TheFoZzYq
 
