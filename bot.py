@@ -1,24 +1,19 @@
 import telebot
 from datetime import datetime, timedelta
 
-TOKEN = '7465745734:AAHnr3_5gYZsC7m2L_92BZW72rA9jHBHago'
+TOKEN = 'YOUR_BOT_TOKEN'
 GROUP_ID = -1001855011523
-OWNER = '@TheFoZzYq'  # Изменено на @TheFoZzYq
+OWNER = '@TheFoZzYq'
 
 bot = telebot.TeleBot(TOKEN)
 ban_list = []
 mute_list = []
 report_list = []
 
-# Проверка администратора
 def is_admin(user_id):
     chat_admins = bot.get_chat_administrators(GROUP_ID)
-    for admin in chat_admins:
-        if admin.user.id == user_id and admin.user.id != bot.user.id:
-            return True
-    return False
+    return any(admin.user.id == user_id and admin.user.id != bot.user.id for admin in chat_admins)
 
-# Преобразование времени бана
 def parse_ban_time(ban_time_str):
     time_units = {
         'год': 'days',
@@ -33,7 +28,6 @@ def parse_ban_time(ban_time_str):
             return timedelta(**{unit_en: amount})
     return None
 
-# Команда /help
 @bot.message_handler(commands=['help'])
 def show_help(message):
     help_text = """
@@ -58,7 +52,6 @@ def show_help(message):
     """
     bot.reply_to(message, help_text)
 
-# Команда "админы"
 @bot.message_handler(func=lambda message: message.text.lower() == 'админы')
 def show_admins(message):
     try:
@@ -70,7 +63,6 @@ def show_admins(message):
     except Exception as e:
         bot.reply_to(message, f"Ошибка: {str(e)}")
 
-# Команда бана
 @bot.message_handler(commands=['ban'])
 def ban_user(message):
     if not is_admin(message.from_user.id):
@@ -78,9 +70,14 @@ def ban_user(message):
         return
 
     try:
+        if not message.reply_to_message:
+            bot.reply_to(message, "Эта команда должна быть ответом на сообщение пользователя.")
+            return
+
         parts = message.text.split()
         ban_duration = parse_ban_time(parts[1])
         reason = ' '.join(parts[2:])
+
         if ban_duration:
             until_date = datetime.now() + ban_duration
             bot.ban_chat_member(GROUP_ID, message.reply_to_message.from_user.id, until_date=until_date.timestamp())
@@ -91,9 +88,6 @@ def ban_user(message):
     except Exception as e:
         bot.reply_to(message, f"Ошибка: {str(e)}")
 
-# Остальной код остается без изменений
-
-# Команда мута
 @bot.message_handler(commands=['mute'])
 def mute_user(message):
     if not is_admin(message.from_user.id):
@@ -101,28 +95,24 @@ def mute_user(message):
         return
 
     try:
+        if not message.reply_to_message:
+            bot.reply_to(message, "Эта команда должна быть ответом на сообщение пользователя.")
+            return
+
         parts = message.text.split()
         mute_duration = parse_ban_time(parts[1])
         reason = ' '.join(parts[2:])
 
-        if message.reply_to_message:
-            user_id = message.reply_to_message.from_user.id
-            username = message.reply_to_message.from_user.username
-        else:
-            username = parts[2].lstrip('@')
-            user_id = bot.get_chat_member(GROUP_ID, username).user.id
-
         if mute_duration:
             until_date = datetime.now() + mute_duration
-            bot.restrict_chat_member(GROUP_ID, user_id, can_send_messages=False, until_date=until_date.timestamp())
-            mute_list.append((username, until_date, reason))
-            bot.reply_to(message, f"Пользователь {username} замучен до {until_date}.\nПричина: {reason}")
+            bot.restrict_chat_member(GROUP_ID, message.reply_to_message.from_user.id, can_send_messages=False, until_date=until_date.timestamp())
+            mute_list.append((message.reply_to_message.from_user.username, until_date, reason))
+            bot.reply_to(message, f"Пользователь {message.reply_to_message.from_user.username} замучен до {until_date}.\nПричина: {reason}")
         else:
             bot.reply_to(message, "Некорректное время мута.")
     except Exception as e:
         bot.reply_to(message, f"Ошибка: {str(e)}")
 
-# Команда размут
 @bot.message_handler(commands=['unmute'])
 def unmute_user(message):
     if not is_admin(message.from_user.id):
@@ -130,21 +120,17 @@ def unmute_user(message):
         return
 
     try:
-        if message.reply_to_message:
-            user_id = message.reply_to_message.from_user.id
-            username = message.reply_to_message.from_user.username
-        else:
-            username = message.text.split()[1]
-            user_id = bot.get_chat_member(GROUP_ID, username).user.id
+        if not message.reply_to_message:
+            bot.reply_to(message, "Эта команда должна быть ответом на сообщение пользователя.")
+            return
 
-        bot.restrict_chat_member(GROUP_ID, user_id, can_send_messages=True)
+        bot.restrict_chat_member(GROUP_ID, message.reply_to_message.from_user.id, can_send_messages=True)
         global mute_list
-        mute_list = [entry for entry in mute_list if entry[0] != username]
-        bot.reply_to(message, f"Пользователь {username} размучен.")
+        mute_list = [entry for entry in mute_list if entry[0] != message.reply_to_message.from_user.username]
+        bot.reply_to(message, f"Пользователь {message.reply_to_message.from_user.username} размучен.")
     except Exception as e:
         bot.reply_to(message, f"Ошибка: {str(e)}")
 
-# Команда /banlist
 @bot.message_handler(commands=['banlist'])
 def show_banlist(message):
     if not is_admin(message.from_user.id):
@@ -159,7 +145,6 @@ def show_banlist(message):
             response += f"{i}. {username}\nСрок бана: {until_date}\nПричина бана: {reason}\n\n"
         bot.reply_to(message, response)
 
-# Команда /mutelist
 @bot.message_handler(commands=['mutelist'])
 def show_mutelist(message):
     if not is_admin(message.from_user.id):
@@ -174,7 +159,6 @@ def show_mutelist(message):
             response += f"{i}. {username}\nСрок мута: {until_date}\nПричина мута: {reason}\n\n"
         bot.reply_to(message, response)
 
-# Команда "отчёты"
 @bot.message_handler(func=lambda message: message.text.lower() == 'отчёты')
 def show_reports(message):
     if not is_admin(message.from_user.id):
@@ -191,7 +175,6 @@ def show_reports(message):
             response += f"   За что был добавлен отчёт — {description}\n\n"
         bot.reply_to(message, response)
 
-# Команда "т+ @user описание"
 @bot.message_handler(func=lambda message: message.text.lower().startswith('т+'))
 def add_report(message):
     if not is_admin(message.from_user.id):
@@ -213,7 +196,6 @@ def add_report(message):
     except Exception as e:
         bot.reply_to(message, f"Ошибка: {str(e)}")
 
-# Команда "т- {номер отчета}"
 @bot.message_handler(func=lambda message: message.text.lower().startswith('т-'))
 def delete_report(message):
     if not is_admin(message.from_user.id):
@@ -235,7 +217,6 @@ def delete_report(message):
     except Exception as e:
         bot.reply_to(message, f"Ошибка: {str(e)}")
 
-# Русская команда мут
 @bot.message_handler(func=lambda message: message.text.lower().startswith('мут') and message.reply_to_message is not None)
 def mute_forever_ru(message):
     if not is_admin(message.from_user.id):
@@ -251,7 +232,6 @@ def mute_forever_ru(message):
     except Exception as e:
         bot.reply_to(message, f"Ошибка: {str(e)}")
 
-# Русская команда разбан
 @bot.message_handler(func=lambda message: message.text.lower() == 'разбан' and message.reply_to_message is not None)
 def unban_ru(message):
     if not is_admin(message.from_user.id):
@@ -266,7 +246,6 @@ def unban_ru(message):
     except Exception as e:
         bot.reply_to(message, f"Ошибка: {str(e)}")
 
-# Русская команда размут
 @bot.message_handler(func=lambda message: message.text.lower() == 'размут' and message.reply_to_message is not None)
 def unmute_ru(message):
     if not is_admin(message.from_user.id):
@@ -281,5 +260,4 @@ def unmute_ru(message):
     except Exception as e:
         bot.reply_to(message, f"Ошибка: {str(e)}")
 
-# Запуск бота
 bot.polling(none_stop=True)
